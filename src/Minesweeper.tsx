@@ -141,7 +141,7 @@ export default function Minesweeper() {
   return (
     <div className="container">
       <header className="header">
-        <img src="image/minesweeper.png" alt="Minesweeper Logo" className="logo" style={{ width: "350px", height: "auto" }} />
+        <img src="./image/minesweeper.png" alt="Minesweeper Logo" className="logo" style={{ width: "350px", height: "auto" }} />
       </header>
       <h4 className="info" style={{textAlign: "center"}}>💣: {flagsLeft} | Difficulty: {level} | Highest Level: {highestLevel}</h4>
       {gameOver && (
