@@ -4,14 +4,26 @@ import "./Minesweeper.css";
 const INITIAL_GRID_SIZE = 8;
 const INITIAL_NUM_MINES = 10;
 
-function generateBoard(gridSize) {
+interface Cell {
+  mine: boolean;
+  revealed: boolean;
+  flagged: boolean;
+  count: number;
+}
+
+interface MinePosition {
+  x: number;
+  y: number;
+}
+
+function generateBoard(gridSize: number): Cell[][] {
   let board = Array(gridSize)
     .fill(null)
     .map(() => Array(gridSize).fill(null).map(() => ({ mine: false, revealed: false, flagged: false, count: 0 })));
   return board;
 }
 
-function placeMines(board, gridSize, numMines, firstClickX, firstClickY) {
+function placeMines(board: Cell[][], gridSize: number, numMines: number, firstClickX: number, firstClickY: number): Cell[][] {
   let newBoard = board.map(row => row.map(cell => ({ ...cell })));
   let minesPlaced = 0;
   while (minesPlaced < numMines) {
@@ -43,12 +55,12 @@ function placeMines(board, gridSize, numMines, firstClickX, firstClickY) {
   return newBoard;
 }
 
-function revealEmptyCells(board, x, y, gridSize) {
+function revealEmptyCells(board: Cell[][], x: number, y: number, gridSize: number): Cell[][] {
   let newBoard = board.map(row => row.map(cell => ({ ...cell })));
   let stack = [[x, y]];
 
   while (stack.length > 0) {
-    let [cx, cy] = stack.pop();
+    let [cx, cy] = stack.pop()!;
     if (!newBoard[cx][cy].revealed && !newBoard[cx][cy].flagged) {
       newBoard[cx][cy].revealed = true;
       if (newBoard[cx][cy].count === 0) {
@@ -67,7 +79,7 @@ function revealEmptyCells(board, x, y, gridSize) {
   return newBoard;
 }
 
-function checkWin(board) {
+function checkWin(board: Cell[][]): boolean {
   return board.every(row => row.every(cell => cell.revealed || cell.mine));
 }
 
@@ -78,25 +90,26 @@ export default function Minesweeper() {
   const [gameOver, setGameOver] = useState(false);
   const [gameWon, setGameWon] = useState(false);
   const [firstClick, setFirstClick] = useState(true);
-  const [lastClickedMine, setLastClickedMine] = useState(null);
+  const [lastClickedMine, setLastClickedMine] = useState<MinePosition | null>(null);
   const [flagsLeft, setFlagsLeft] = useState(numMines);
   const [level, setLevel] = useState(1);
+  const [highestLevel, setHighestLevel] = useState(() => {
+    return parseInt(localStorage.getItem('highestLevel') || '1', 10);
+  });
 
   useEffect(() => {
     if (gameWon) {
-      setGridSize(gridSize + 1);
-      setNumMines(numMines + 2);
-      setLevel(level + 1);
-      setBoard(generateBoard(gridSize + 1));
-      setGameOver(false);
-      setGameWon(false);
-      setFirstClick(true);
-      setLastClickedMine(null);
-      setFlagsLeft(numMines + 2);
+      const newLevel = level + 1;
+      setLevel(newLevel);
+
+      if (newLevel > highestLevel) {
+        setHighestLevel(newLevel);
+        localStorage.setItem('highestLevel', newLevel.toString());
+      }
     }
   }, [gameWon]);
 
-  const revealCell = (x, y) => {
+  const revealCell = (x: number, y: number) => {
     if (gameOver || gameWon || board[x][y].revealed || board[x][y].flagged) return;
     let newBoard = [...board];
     if (firstClick) {
@@ -115,15 +128,21 @@ export default function Minesweeper() {
     }
   };
 
-  const revealNeighbors = (x, y) => {
+  const revealNeighbors = (x: number, y: number) => {
     if (!board[x][y].revealed || board[x][y].count === 0) return;
     let flagCount = 0;
+    let incorrectFlag = false;
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
         let nx = x + dx;
         let ny = y + dy;
-        if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize && board[nx][ny].flagged) {
-          flagCount++;
+        if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize) {
+          if (board[nx][ny].flagged) {
+            flagCount++;
+            if (!board[nx][ny].mine) {
+              incorrectFlag = true;
+            }
+          }
         }
       }
     }
@@ -134,6 +153,11 @@ export default function Minesweeper() {
           let nx = x + dx;
           let ny = y + dy;
           if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize && !newBoard[nx][ny].flagged && !newBoard[nx][ny].revealed) {
+            if (newBoard[nx][ny].mine) {
+              setGameOver(true);
+              setLastClickedMine({ x: nx, y: ny });
+              return;
+            }
             newBoard = revealEmptyCells(newBoard, nx, ny, gridSize);
           }
         }
@@ -142,10 +166,13 @@ export default function Minesweeper() {
       if (checkWin(newBoard)) {
         setGameWon(true);
       }
+    } else if (incorrectFlag) {
+      setGameOver(true);
+      setLastClickedMine({ x, y });
     }
   };
 
-  const flagNeighbors = (x, y) => {
+  const flagNeighbors = (x: number, y: number) => {
     if (!board[x][y].revealed || board[x][y].count === 0) return;
     let remainingCells = 0;
     let flagCount = 0;
@@ -179,7 +206,7 @@ export default function Minesweeper() {
     }
   };
 
-  const toggleFlag = (e, x, y) => {
+  const toggleFlag = (e: React.MouseEvent, x: number, y: number) => {
     e.preventDefault();
     if (board[x][y].revealed || gameOver || gameWon) return;
     let newBoard = [...board];
@@ -200,12 +227,25 @@ export default function Minesweeper() {
     setLevel(1);
   };
 
+  const nextLevel = () => {
+    setGameWon(false);
+    const newGridSize = gridSize + 1;
+    const newNumMines = numMines + 2;
+    setGridSize(newGridSize);
+    setNumMines(newNumMines);
+    setBoard(generateBoard(newGridSize));
+    setGameOver(false);
+    setFirstClick(true);
+    setLastClickedMine(null);
+    setFlagsLeft(newNumMines);
+  };
+
   return (
     <div className="container">
       <header>
         <h1>Minesweeper</h1>
       </header>
-      <p>Mines left: {flagsLeft} | Level: {level}</p>
+      <p>Mines left: {flagsLeft} | Level: {level} | Highest Level: {highestLevel}</p>
       {gameOver && (
         <div className="modal">
           <div className="modal-content">
@@ -214,7 +254,15 @@ export default function Minesweeper() {
           </div>
         </div>
       )}
-      {gameWon && <p className="game-won">You Win!</p>}
+      {gameWon && (
+        <div className="modal">
+          <div className="modal-content">
+            <h2>Congratulations!</h2>
+            <p>You have won this level.</p>
+            <button onClick={nextLevel} className="reset-btn">Next Level</button>
+          </div>
+        </div>
+      )}
       <div className={`grid ${gameOver || gameWon ? "disabled" : ""}`} style={{ gridTemplateColumns: `repeat(${gridSize}, 40px)` }}>
         {board.map((row, x) =>
           row.map((cell, y) => (
