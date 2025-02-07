@@ -5,7 +5,7 @@ import { placeMines } from "./utils/placeMines";
 import { revealEmptyCells } from "./utils/revealEmptyCells";
 import { checkWin } from "./utils/checkWin";
 import { flagNeighbors } from "./utils/flagNeighbors";
-import { Cell, MinePosition } from "./utils/types";
+import { MinePosition } from "./utils/types";
 
 const INITIAL_GRID_SIZE = 8;
 const INITIAL_NUM_MINES = 10;
@@ -140,14 +140,14 @@ export default function Minesweeper() {
 
   return (
     <div className="container">
-      <header>
-        <img src="image/minesweeper.png" alt="Minesweeper Logo" style={{ width: "350px", height: "auto" }} />
+      <header className="header">
+        <img src="image/minesweeper.png" alt="Minesweeper Logo" className="logo" style={{ width: "350px", height: "auto" }} />
       </header>
-      <p>Mines left: {flagsLeft} | Level: {level} | Highest Level: {highestLevel}</p>
+      <h4 className="info" style={{textAlign: "center"}}>💣: {flagsLeft} | Difficulty: {level} | Highest Level: {highestLevel}</h4>
       {gameOver && (
         <div className="modal">
           <div className="modal-content">
-            <h2>You Lose!</h2>
+            <h2>You Lose! ☠️</h2>
             <button onClick={newGame} className="reset-btn">Restart Game</button>
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function Minesweeper() {
           </div>
         </div>
       )}
-      <div className={`grid ${gameOver || gameWon ? "disabled" : ""}`} style={{ gridTemplateColumns: `repeat(${gridSize}, 40px)` }}>
+      <div className={`grid ${gameOver || gameWon ? "disabled" : ""}`} style={{ gridTemplateColumns: `repeat(${gridSize}, 50px)` }}>
         {board.map((row, x) =>
           row.map((cell, y) => (
             <button
@@ -177,6 +177,7 @@ export default function Minesweeper() {
               onContextMenu={(e) => {
                 e.preventDefault();
                 handleFlagNeighbors(x, y);
+                toggleFlag(e, x, y);
               }}
               style={lastClickedMine?.x === x && lastClickedMine?.y === y ? { backgroundColor: "red" } : {}}
             >
