@@ -287,6 +287,7 @@ export default function Minesweeper() {
               style={lastClickedMine?.x === x && lastClickedMine?.y === y ? { backgroundColor: "red" } : {}}
             >
               {cell.revealed && !cell.mine ? (cell.count > 0 ? cell.count : "") : cell.flagged ? "🚩" : ""}
+              {lastClickedMine?.x === x && lastClickedMine?.y === y && cell.mine ? "💣" : ""}
             </button>
           ))
         )}
