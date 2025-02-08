@@ -166,7 +166,7 @@ export default function Minesweeper() {
           </div>
         </div>
       )}
-      <div className={`grid ${gameOver || gameWon ? "disabled" : ""}`} style={{ gridTemplateColumns: `repeat(${gridSize}, 50px)` }}>
+      <div className={`grid ${gameOver || gameWon ? "disabled" : ""}`} style={{ gridTemplateColumns: `repeat(${gridSize}, 30px)` }}>
         {board.map((row, x) =>
           row.map((cell, y) => (
             <button
