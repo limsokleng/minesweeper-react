@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import axios from "axios";
 import "./Minesweeper.css";
 import { generateBoard } from "./utils/generateBoard";
 import { placeMines } from "./utils/placeMines";
@@ -10,6 +11,10 @@ import { MinePosition } from "./utils/types";
 const INITIAL_GRID_SIZE = 8;
 const INITIAL_NUM_MINES = 10;
 
+interface Score {
+  highscore: number;
+}
+
 export default function Minesweeper() {
   const [gridSize, setGridSize] = useState(INITIAL_GRID_SIZE);
   const [numMines, setNumMines] = useState(INITIAL_NUM_MINES);
@@ -20,21 +25,38 @@ export default function Minesweeper() {
   const [lastClickedMine, setLastClickedMine] = useState<MinePosition | null>(null);
   const [flagsLeft, setFlagsLeft] = useState(numMines);
   const [level, setLevel] = useState(1);
-  const [highestLevel, setHighestLevel] = useState(() => {
-    return parseInt(localStorage.getItem('highestLevel') || '1', 10);
-  });
+  const [highestLevel, setHighestLevel] = useState(0); // Initialize with 0
 
   useEffect(() => {
-    if (gameWon) {
-      const newLevel = level + 1;
-      setLevel(newLevel);
-
-      if (newLevel > highestLevel) {
-        setHighestLevel(newLevel);
-        localStorage.setItem('highestLevel', newLevel.toString());
+    // Fetch the highest level from the backend
+    const fetchHighestLevel = async () => {
+      try {
+        const response = await axios.get("https://minesweeper-server-limsokleng-sokleng-lims-projects.vercel.app/api/highscore");
+        if (response.data) {
+          const highest = response.data.reduce((max: number, score: Score) => score.highscore > max ? score.highscore : max, 0);
+          setHighestLevel(highest);
+        }
+      } catch (err) {
+        console.error("Error fetching highest level", err);
       }
+    };
+
+    fetchHighestLevel();
+  }, []);
+
+  useEffect(() => {
+    if (gameOver && level > highestLevel) {
+      setHighestLevel(level);
+      // Update the highest level in the backend
+      axios.post("https://minesweeper-server-limsokleng-sokleng-lims-projects.vercel.app/api/highscore", { highscore: level })
+        .then(response => {
+          console.log("Highest level updated:", response.data);
+        })
+        .catch(err => {
+          console.error("Error updating highest level", err);
+        });
     }
-  }, [gameWon]);
+  }, [gameOver]);
 
   const revealCell = (x: number, y: number) => {
     if (gameOver || gameWon || board[x][y].revealed || board[x][y].flagged) return;
@@ -136,6 +158,7 @@ export default function Minesweeper() {
     setFirstClick(true);
     setLastClickedMine(null);
     setFlagsLeft(newNumMines);
+    setLevel(level + 1);
   };
 
   return (
