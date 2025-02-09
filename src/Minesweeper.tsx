@@ -68,6 +68,7 @@ export default function Minesweeper() {
     if (newBoard[x][y].mine) {
       setGameOver(true);
       setLastClickedMine({ x, y });
+      revealAllMines(newBoard);
       return;
     }
     newBoard = revealEmptyCells(newBoard, x, y, gridSize);
@@ -95,6 +96,7 @@ export default function Minesweeper() {
         }
       }
     }
+    if (flagCount !== board[x][y].count) return; // Ensure the function only triggers when the number of flagged cells matches the number on the cell
     if (flagCount === board[x][y].count) {
       let newBoard = [...board];
       for (let dx = -1; dx <= 1; dx++) {
@@ -105,6 +107,7 @@ export default function Minesweeper() {
             if (newBoard[nx][ny].mine) {
               setGameOver(true);
               setLastClickedMine({ x: nx, y: ny });
+              revealAllMines(newBoard);
               return;
             }
             newBoard = revealEmptyCells(newBoard, nx, ny, gridSize);
@@ -118,7 +121,20 @@ export default function Minesweeper() {
     } else if (incorrectFlag) {
       setGameOver(true);
       setLastClickedMine({ x, y });
+      revealAllMines(board);
     }
+  };
+
+  const revealAllMines = (board: any) => {
+    const newBoard = board.map((row: any) =>
+      row.map((cell: any) => {
+        if (cell.mine) {
+          cell.revealed = true;
+        }
+        return cell;
+      })
+    );
+    setBoard(newBoard);
   };
 
   const handleFlagNeighbors = (x: number, y: number) => {

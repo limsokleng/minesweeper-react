@@ -126,7 +126,7 @@ button:disabled {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.5); /* Add opacity */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -173,4 +173,9 @@ button:disabled {
 .info-right {
   text-align: right;
   flex: 1;
+}
+
+.grid.disabled {
+  pointer-events: none;
+  opacity: 0.05; /* Add opacity to the grid when disabled */
 }
