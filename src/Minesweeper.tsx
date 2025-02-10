@@ -6,6 +6,8 @@ import { placeMines } from "./utils/placeMines";
 import { revealEmptyCells } from "./utils/revealEmptyCells";
 import { checkWin } from "./utils/checkWin";
 import { flagNeighbors } from "./utils/flagNeighbors";
+import { revealNeighbors } from "./utils/revealNeighbors";
+import { revealAllMines } from "./utils/revealAllMines";
 import { MinePosition } from "./utils/types";
 
 const INITIAL_GRID_SIZE = 8;
@@ -68,7 +70,7 @@ export default function Minesweeper() {
     if (newBoard[x][y].mine) {
       setGameOver(true);
       setLastClickedMine({ x, y });
-      revealAllMines(newBoard);
+      revealAllMines(newBoard, setBoard);
       return;
     }
     newBoard = revealEmptyCells(newBoard, x, y, gridSize);
@@ -78,70 +80,6 @@ export default function Minesweeper() {
     }
   };
 
-  const revealNeighbors = (x: number, y: number) => {
-    if (!board[x][y].revealed || board[x][y].count === 0) return;
-    let flagCount = 0;
-    let incorrectFlag = false;
-    for (let dx = -1; dx <= 1; dx++) {
-      for (let dy = -1; dy <= 1; dy++) {
-        let nx = x + dx;
-        let ny = y + dy;
-        if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize) {
-          if (board[nx][ny].flagged) {
-            flagCount++;
-            if (!board[nx][ny].mine) {
-              incorrectFlag = true;
-            }
-          }
-        }
-      }
-    }
-    if (flagCount !== board[x][y].count) return; // Ensure the function only triggers when the number of flagged cells matches the number on the cell
-    if (flagCount === board[x][y].count) {
-      let newBoard = [...board];
-      for (let dx = -1; dx <= 1; dx++) {
-        for (let dy = -1; dy <= 1; dy++) {
-          let nx = x + dx;
-          let ny = y + dy;
-          if (nx >= 0 && nx < gridSize && ny >= 0 && ny < gridSize && !newBoard[nx][ny].flagged && !newBoard[nx][ny].revealed) {
-            if (newBoard[nx][ny].mine) {
-              setGameOver(true);
-              setLastClickedMine({ x: nx, y: ny });
-              revealAllMines(newBoard);
-              return;
-            }
-            newBoard = revealEmptyCells(newBoard, nx, ny, gridSize);
-          }
-        }
-      }
-      setBoard(newBoard);
-      if (checkWin(newBoard)) {
-        setGameWon(true);
-      }
-    } else if (incorrectFlag) {
-      setGameOver(true);
-      setLastClickedMine({ x, y });
-      revealAllMines(board);
-    }
-  };
-
-  const revealAllMines = (board: any) => {
-    const newBoard = board.map((row: any) =>
-      row.map((cell: any) => {
-        if (cell.mine) {
-          cell.revealed = true;
-        }
-        return cell;
-      })
-    );
-    setBoard(newBoard);
-  };
-
-  const handleFlagNeighbors = (x: number, y: number) => {
-    const newBoard = flagNeighbors(board, x, y, gridSize, flagsLeft, setFlagsLeft);
-    setBoard(newBoard);
-  };
-
   const toggleFlag = (e: React.MouseEvent | React.TouchEvent, x: number, y: number) => {
     e.preventDefault();
     if (board[x][y].revealed || gameOver || gameWon) return;
@@ -149,6 +87,11 @@ export default function Minesweeper() {
     newBoard[x][y].flagged = !newBoard[x][y].flagged;
     setBoard(newBoard);
     setFlagsLeft(newBoard[x][y].flagged ? flagsLeft - 1 : flagsLeft + 1);
+  };
+
+  const handleFlagNeighbors = (x: number, y: number) => {
+    const newBoard = flagNeighbors(board, x, y, gridSize, flagsLeft, setFlagsLeft);
+    setBoard(newBoard);
   };
 
   const newGame = () => {
@@ -213,7 +156,7 @@ export default function Minesweeper() {
               className={`cell ${cell.revealed ? (cell.mine ? (lastClickedMine?.x === x && lastClickedMine?.y === y ? "mine-hit" : "mine") : "revealed") : ""} ${cell.flagged ? "flagged" : ""}`}
               onClick={() => {
                 if (board[x][y].revealed) {
-                  revealNeighbors(x, y);
+                  revealNeighbors(board, x, y, gridSize, setBoard, setGameOver, setLastClickedMine, setGameWon);
                 } else {
                   revealCell(x, y);
                 }
