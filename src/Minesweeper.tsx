@@ -8,10 +8,15 @@ import { checkWin } from "./utils/checkWin";
 import { flagNeighbors } from "./utils/flagNeighbors";
 import { revealNeighbors } from "./utils/revealNeighbors";
 import { revealAllMines } from "./utils/revealAllMines";
+import { revealCell } from "./utils/revealCell";
+import { useHint } from "./utils/useHint";
 import { MinePosition } from "./utils/types";
 
 const INITIAL_GRID_SIZE = 8;
 const INITIAL_NUM_MINES = 10;
+const MAX_POINTS = 250;
+const WIN_POINTS = 25;
+const HINT_COST = 50;
 
 interface Score {
   highscore: number;
@@ -28,6 +33,7 @@ export default function Minesweeper() {
   const [flagsLeft, setFlagsLeft] = useState(numMines);
   const [level, setLevel] = useState(1);
   const [highestLevel, setHighestLevel] = useState(0); // Initialize with 0
+  const [points, setPoints] = useState(MAX_POINTS);
 
   useEffect(() => {
     // Fetch the highest level from the backend
@@ -60,26 +66,6 @@ export default function Minesweeper() {
     }
   }, [gameOver]);
 
-  const revealCell = (x: number, y: number) => {
-    if (gameOver || gameWon || board[x][y].revealed || board[x][y].flagged) return;
-    let newBoard = [...board];
-    if (firstClick) {
-      newBoard = placeMines(board, gridSize, numMines, x, y);
-      setFirstClick(false);
-    }
-    if (newBoard[x][y].mine) {
-      setGameOver(true);
-      setLastClickedMine({ x, y });
-      revealAllMines(newBoard, setBoard);
-      return;
-    }
-    newBoard = revealEmptyCells(newBoard, x, y, gridSize);
-    setBoard(newBoard);
-    if (checkWin(newBoard)) {
-      setGameWon(true);
-    }
-  };
-
   const toggleFlag = (e: React.MouseEvent | React.TouchEvent, x: number, y: number) => {
     e.preventDefault();
     if (board[x][y].revealed || gameOver || gameWon) return;
@@ -104,6 +90,7 @@ export default function Minesweeper() {
     setLastClickedMine(null);
     setFlagsLeft(INITIAL_NUM_MINES);
     setLevel(1);
+    setPoints(MAX_POINTS);
   };
 
   const nextLevel = () => {
@@ -118,6 +105,9 @@ export default function Minesweeper() {
     setLastClickedMine(null);
     setFlagsLeft(newNumMines);
     setLevel(level + 1);
+    if (points < MAX_POINTS) {
+      setPoints(Math.min(points + WIN_POINTS, MAX_POINTS));
+    }
   };
 
   return (
@@ -130,7 +120,37 @@ export default function Minesweeper() {
           style={{ width: "350px", height: "auto" }}
         />
       </header>
-      <h4 className="info" style={{ textAlign: "center" }}>💣: {flagsLeft} | Difficulty: {level} | Highest Level: {highestLevel}</h4>
+      <h4 className="info" style={{ textAlign: "center" }}>💣: {flagsLeft} | Difficulty: {level} | Highest Level: {highestLevel} </h4>
+
+      <button
+        onClick={() =>
+          useHint(
+            board,
+            setBoard,
+            setPoints,
+            points,
+            HINT_COST,
+            gridSize,
+            setGameOver,
+            setLastClickedMine,
+            setGameWon,
+            firstClick,
+            setFirstClick,
+            MAX_POINTS,
+            WIN_POINTS,
+            numMines
+          )
+        }
+        className="hint-btn"
+        disabled={points < HINT_COST || gameOver || gameWon}
+        style={{ '--points': `${points}`, '--max-points': `${MAX_POINTS}` } as React.CSSProperties}
+      >
+        <span className="icon">🔍</span>
+        <span style={{ fontSize: "12px" }}>Hints ({points}/{MAX_POINTS})</span>
+      </button>
+
+
+
       {gameOver && (
         <div className="modal">
           <div className="modal-content">
@@ -158,7 +178,7 @@ export default function Minesweeper() {
                 if (board[x][y].revealed) {
                   revealNeighbors(board, x, y, gridSize, setBoard, setGameOver, setLastClickedMine, setGameWon);
                 } else {
-                  revealCell(x, y);
+                  revealCell(x, y, board, setBoard, setGameOver, setLastClickedMine, setGameWon, firstClick, setFirstClick, setPoints, points, MAX_POINTS, WIN_POINTS, gridSize, numMines);
                 }
               }}
               onContextMenu={(e) => {
